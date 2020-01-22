@@ -1,0 +1,46 @@
+Port 22
+AddressFamily any
+ListenAddress 0.0.0.0
+ListenAddress ::
+Protocol 2
+LogLevel INFO
+LoginGraceTime 1m
+PermitRootLogin no
+PasswordAuthentication no
+ChallengeResponseAuthentication no
+UsePAM yes
+
+HostKey /etc/ssh/ssh_host_ed25519_key
+HostKey /etc/ssh/ssh_host_rsa_key
+HostKey /etc/ssh/ssh_host_ecdsa_key
+
+KexAlgorithms curve25519-sha256@libssh.org,ecdh-sha2-nistp521,ecdh-sha2-nistp384,ecdh-sha2-nistp256,diffie-hellman-group-exchange-sha256
+Ciphers chacha20-poly1305@openssh.com,aes256-gcm@openssh.com,aes128-gcm@openssh.com,aes256-ctr,aes192-ctr,aes128-ctr
+MACs hmac-sha2-512-etm@openssh.com,hmac-sha2-256-etm@openssh.com,umac-128-etm@openssh.com,hmac-sha2-512,hmac-sha2-256,umac-128@openssh.com
+
+X11Forwarding no
+AllowTcpForwarding no
+AllowStreamLocalForwarding no
+GatewayPorts no
+PermitTunnel no
+PrintMotd no
+PrintLastLog yes
+TCPKeepAlive yes
+UseLogin no
+UseDNS no
+IgnoreRhosts yes
+UseDNS no
+HostbasedAuthentication no
+PermitUserEnvironment no
+MaxSessions 2
+ClientAliveInterval 60
+ClientAliveCountMax 0
+
+Banner /etc/ssh/sshd_banner
+UsePrivilegeSeparation sandbox
+
+AcceptEnv LANG LC_*
+Subsystem sftp internal-sftp -f AUTHPRIV -l INFO
+Match Group berserk
+        AuthorizedKeysFile /etc/ssh/authorized_keys/%u
+        ChrootDirectory %h
