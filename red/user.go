@@ -172,7 +172,12 @@ func addUser(u string, key []byte) error {
 		return err
 	}
 
-	err = os.MkdirAll(path.Join(home, "log"), 0755)
+	err = os.MkdirAll(path.Join(home, "private"), 0700)
+	if err != nil {
+		return err
+	}
+
+	err = os.MkdirAll(path.Join(home, "log"), 0700)
 	if err != nil {
 		return err
 	}

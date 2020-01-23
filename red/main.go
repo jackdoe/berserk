@@ -199,13 +199,19 @@ for more info use:
 			// FIXME: allowing test, lets see how many people will scam
 			//}
 
-			p := path.Join(ROOT, u, "public_html")
+			pub := path.Join(ROOT, u, "public_html")
+			priv := path.Join(ROOT, u, "private")
+
 			if n.TxnType == "subscr_signup" {
-				_ = appendUserLog(u, "status.txt", []byte(fmt.Sprintf("chown %s %s", u, p)))
-				_ = chown(u, p)
+				for _, p := range []string{pub, priv} {
+					_ = appendUserLog(u, "status.txt", []byte(fmt.Sprintf("chown %s %s", u, p)))
+					_ = chown(u, p)
+				}
 			} else if n.TxnType == "subscr_cancel" {
-				_ = appendUserLog(u, "status.txt", []byte(fmt.Sprintf("chown root %s", p)))
-				_ = chown("root", p)
+				for _, p := range []string{pub, priv} {
+					_ = appendUserLog(u, "status.txt", []byte(fmt.Sprintf("chown %s %s", u, p)))
+					_ = chown("root", p)
+				}
 			}
 		}
 		return nil
