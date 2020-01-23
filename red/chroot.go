@@ -1,6 +1,7 @@
 package main
 
 var BASIC_CHROOT = []string{
+	"/lib64/ld-linux-x86-64.so.2",
 	"/lib/terminfo/v/vt102",
 	"/lib/terminfo/v/vt52",
 	"/lib/terminfo/v/vt220",
