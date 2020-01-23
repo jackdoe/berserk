@@ -208,7 +208,7 @@ func addUser(u string, key []byte) error {
 
 func appendUserLog(u string, logname string, data []byte) error {
 	filename := path.Join(ROOT, u, "log", logname)
-	f, err := os.OpenFile(filename, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0664)
+	f, err := os.OpenFile(filename, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0600)
 	if err != nil {
 		return err
 	}
