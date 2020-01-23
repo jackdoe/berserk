@@ -1,3 +1,9 @@
+
+experimental, use it at your own risk
+
+
+------------------
+
 Hi,
 
 https://berserk.red is a shell + web hosting service
@@ -72,3 +78,51 @@ Usage:
     * users are chrooted to their homedir
 
 -b
+
+
+------------------
+
+there is no docker, no cloud, no replication, no nothing
+
+using 1 machine with attached volume on digital ocean:
+
+
+/etc/security/limits.conf:
+        memory, nprocs, cpu, etc..
+
+quota:
+        usrquota,grpquota
+
+chroot:
+        Match Group berserk
+                AuthorizedKeysFile /etc/ssh/authorized_keys/%u
+                ChrootDirectory %h
+
+security:
+        up-to-date ubuntu, with daily security updates etc.. but that
+        only gets us so far, assume the machine hacked.
+
+        /home/user is owner by root (and user is chrooted into it)
+        /home/user/private is owned by user:user and mode is 0700
+        /home/user/public_html is owned by user:user
+        /home/user/log owned by root mode 700 and files are 0600
+
+        log contains logs of the http request registering the user
+        and payment subscription events from paypal.
+
+internet:
+        there is no outgoing internet, only http, https, ssh input and
+        those established connections are allowed
+
+talk:
+        you can talk with someone by typing
+        $ talk jack@127.0.0.1
+        it is pretty cool
+
+NB: use it at your own risk
+
+
+TODO:
+* mud
+* ircd
+* bbs
