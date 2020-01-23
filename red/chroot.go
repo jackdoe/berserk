@@ -108,10 +108,12 @@ var BASIC_CHROOT = []string{
 	"/usr/bin/strace",
 	"/usr/bin/vim",
 	"/usr/bin/tree",
+	"/usr/bin/talk",
 	"/usr/bin/locale",
 	"/usr/bin/clear",
 	"/usr/games/nudoku",
 	"/etc/resolv.conf",
 	"/etc/services",
 	"/etc/nsswitch.conf",
-	"/etc/hosts"}
+	"/etc/hosts",
+}
