@@ -41,27 +41,7 @@ func main() {
 			panic(err)
 		}
 
-		c.String(200, fmt.Sprintf(`
-Hi,
-Thanks for registering at https://berserk.red.
-
-The price is 1€ per month for 1GB of space. 
-(trial 0.1€ for the first month)
-
-you can pay to it with paypal by following the redirect at:
-
-    https://berserk.red/sub/%s
-
-After you pay you can access it by:
-
-    ssh %s@berserk.red "echo hi > public_html/index.html"
-
-Please send feedback to: jack@baxx.dev
-
-Thanks again.
-
--b
-`, u, u))
+		c.String(200, fmt.Sprintf(AFTER_REGISTER, u, u))
 	})
 
 	r.GET("/~:user", func(c *gin.Context) {
@@ -69,54 +49,15 @@ Thanks again.
 	})
 
 	r.GET("/", func(c *gin.Context) {
-		c.String(200, `
-Hi,
+		c.String(200, SLASH)
+	})
 
-https://berserk.red is a shell + web hosting service
-
-The price is 1€ per month for 1GB of space. 
-(trial 0.1€ for the first month)
-
-you can register by sending your pub key to:
-
-    cat ~/.ssh/id_rsa.pub | curl -d@- https://berserk.red/register/:username
-    # usernames are lowercase a-z up to 8 characters
-
-then follow the instructions.
-
-After you register and pay you can access it by:
-
-    ssh username@berserk.red "echo hi > public_html/index.html"
-
-    sftp username@berserk.red
-
-    sshfs .. etc
-
-
-All the logs about your payment/registration are stored in log/ and
-are not accessible by anyone but you and me.
-
-Please send feedback to:
-    jack@baxx.dev or https://github.com/jackdoe/berserk
-
--b
-`)
+	r.GET("/tos", func(c *gin.Context) {
+		c.String(200, LICENSE)
 	})
 
 	r.GET("/thanks_for_paying", func(c *gin.Context) {
-		c.String(200, `
-Hi,
-
-Thanks for paying.
-
-In few seconds paypal will send IPN notification to
-https://berserk.red and the account will be enabled.
-
-for more info use:
-    curl https://berserk.red
-
--b
-`)
+		c.String(200, THANKS_FOR_PAYING)
 	})
 
 	r.GET("/~:user/*path", func(c *gin.Context) {
