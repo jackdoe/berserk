@@ -99,12 +99,6 @@ are not accessible by anyone but you and me.
 Please send feedback to:
     jack@baxx.dev or https://github.com/jackdoe/berserk
 
-PS:
-ssh is of course vulnerable to MITM, so please get berserk's public
-key from:
-   curl https://berserk.red/ssh >> ~/.ssh/known_hosts
-
-
 -b
 `)
 	})
@@ -170,10 +164,6 @@ for more info use:
 
 		url := prefix + "?cmd=_xclick-subscriptions&business=jack%40baxx.dev&a3=1&p3=1&t3=M&item_name=berserk.red+-+personal+website&return=https%3A%2F%2Fberserk.red%2Fthanks_for_paying&a1=0.1&no_shipping=1&p1=1&t1=M&src=1&sra=1&no_note=1&no_note=1&currency_code=EUR&lc=GB&notify_url=https%3A%2F%2Fberserk.red%2Fipn%2F" + u
 		c.Redirect(http.StatusFound, url)
-	})
-
-	r.GET("/ssh", func(c *gin.Context) {
-		c.File("/etc/ssh/ssh_host_rsa_key.pub")
 	})
 
 	ipn.Listener(r, "/ipn/:user", func(c *gin.Context, err error, body string, n *ipn.Notification) error {
