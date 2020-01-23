@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os"
 	"os/user"
 	"path"
@@ -62,9 +63,15 @@ var BLACKLIST = map[string]bool{
 	"postgres":         true,
 }
 
-func chroot(p string) error {
+func chroot(u string, p string) error {
 	dev := path.Join(p, "dev")
 	err := os.MkdirAll(dev, 0775)
+	if err != nil {
+		return err
+	}
+
+	etc := path.Join(p, "etc")
+	err = os.MkdirAll(etc, 0775)
 	if err != nil {
 		return err
 	}
@@ -89,18 +96,22 @@ func chroot(p string) error {
 		return err
 	}
 
-	err = fcopy(p, "/lib/x86_64-linux-gnu/libtinfo.so.5",
-		"/lib/x86_64-linux-gnu/libdl.so.2",
-		"/lib/x86_64-linux-gnu/libc.so.6",
-		"/lib/x86_64-linux-gnu/libpthread.so.0",
-		"/lib/x86_64-linux-gnu/libselinux.so.1",
-		"/lib/x86_64-linux-gnu/libpcre.so.3",
-		"/lib64/ld-linux-x86-64.so.2",
-		"/bin/ls",
-		"/bin/cat",
-		"/bin/echo",
-		"/bin/grep",
-		"/bin/bash")
+	uid, gid, err := uidgid(u)
+	if err != nil {
+		return err
+	}
+
+	err = ioutil.WriteFile(path.Join(etc, "passwd"), []byte(fmt.Sprintf("%s:x:%d:%d:GECOS,,,:/:/bin/bash\n", u, uid, gid)), 0755)
+	if err != nil {
+		return err
+	}
+
+	err = ioutil.WriteFile(path.Join(etc, "profile"), []byte(`PS1="\033[1;31m\]\\h:\\w\\$\033[00m\] "`), 0755)
+	if err != nil {
+		return err
+	}
+
+	err = fcopy(p, BASIC_CHROOT...)
 	if err != nil {
 		return err
 	}
@@ -111,6 +122,7 @@ func keyIsValid(key []byte) error {
 	_, _, _, _, err := ssh.ParseAuthorizedKey(key)
 	return err
 }
+
 func appendAuthorizedKey(p string, key []byte) error {
 	err := keyIsValid(key)
 	if err != nil {
@@ -203,7 +215,7 @@ func addUser(u string, key []byte) error {
 		return err
 	}
 
-	return chroot(home)
+	return chroot(u, home)
 }
 
 func appendUserLog(u string, logname string, data []byte) error {

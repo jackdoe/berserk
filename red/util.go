@@ -73,17 +73,26 @@ func fcopy(dstRoot string, many ...string) error {
 	return nil
 }
 
-func chown(u string, dirs ...string) error {
+func uidgid(u string) (int, int, error) {
 	x, err := user.Lookup(u)
 	if err != nil {
-		return err
+		return 0, 0, err
 	}
 	uid, err := strconv.ParseInt(x.Uid, 10, 64)
 	if err != nil {
-		return err
+		return 0, 0, err
 	}
 
 	gid, err := strconv.ParseInt(x.Gid, 10, 64)
+	if err != nil {
+		return 0, 0, err
+	}
+
+	return int(uid), int(gid), nil
+}
+
+func chown(u string, dirs ...string) error {
+	uid, gid, err := uidgid(u)
 	if err != nil {
 		return err
 	}
