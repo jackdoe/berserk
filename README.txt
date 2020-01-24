@@ -135,6 +135,17 @@ Why?
 > why not?
 
 
+I feel I have lost my edge, havent been reading the exploit lists, and
+just chilling as if everything is taken care of.  Having a box where
+people can get a shell will surely keep me on my toes.
+
+Shell + public_html was my first experience on the web, in ~1999, I
+had an ugly website where I used to write poems for my girlfriend (now
+my wife). Sadly when they shut it down I did not download it and now
+they are lost forever (I dont remember what I wrote, but I doubt it is
+a big loss). Anyway, it was a lot of fun trying to quit vi for the
+first time haha.
+
 ------------------
 
 INBOX:
@@ -153,8 +164,6 @@ Message-ID: <1234@local.machine.example>
 This is a message just to say hello.
 So, "Hello".
 EOF
-
-
 
 this will create file in ~jack/Maildir/new with the mail inside
 
