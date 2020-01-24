@@ -194,7 +194,7 @@ func addUser(u string, key []byte) error {
 		return err
 	}
 
-	err = run("/usr/sbin/adduser", "--gecos", "GECOS", "--home", home, "--no-create-home", "--disabled-password", "--add_extra_groups", u)
+	err = run("/usr/sbin/adduser", "--firstuid", "1000", "--gecos", "GECOS", "--home", home, "--no-create-home", "--disabled-password", "--add_extra_groups", u)
 	if err != nil {
 		return err
 	}
