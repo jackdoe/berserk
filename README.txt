@@ -150,7 +150,7 @@ first time haha.
 
 INBOX:
 
-I am experimenting with some way to receive messages (without mail)
+I am experimenting with some way to receive messages (without smtp)
 
 example:
 

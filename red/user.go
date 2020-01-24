@@ -156,6 +156,7 @@ func (u *User) Enable() error {
 func (u *User) Disable() error {
 	for dir := range ALLOWED {
 		p := path.Join(u.Home, dir)
+
 		// FIXME: recursive
 		err := chown(0, 0, p)
 		if err != nil {
