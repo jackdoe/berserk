@@ -141,7 +141,7 @@ INBOX:
 I am experimenting with some way to receive messages (without mail)
 
 example:
-    echo "XYZ" | curl -XPOST -d@- https://berserk.red/inbox/raw/jack
+    echo "XYZ" | curl -d@- https://berserk.red/inbox/raw/jack
 
 this will create file in ~jack/private/inbox/raw with the message
 "XYZ" in it

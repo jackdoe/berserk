@@ -100,9 +100,14 @@ func main() {
 
 		defer c.Request.Body.Close()
 
-		err := userIsValid(u)
+		uid, _, err := uidgid(u)
 		if err != nil {
 			c.JSON(400, gin.H{"error": err.Error()})
+			return
+		}
+
+		if uid < 1000 {
+			c.JSON(400, gin.H{"error": "invalid user"})
 			return
 		}
 
