@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"net/http/httputil"
@@ -10,6 +11,7 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	ipn "github.com/jackdoe/gin-ipn"
@@ -91,6 +93,57 @@ func main() {
 		}
 
 		c.File(p)
+	})
+
+	r.POST("/inbox/raw/:user", func(c *gin.Context) {
+		u := strings.Trim(c.Param("user"), "~")
+
+		defer c.Request.Body.Close()
+
+		err := userIsValid(u)
+		if err != nil {
+			c.JSON(400, gin.H{"error": err.Error()})
+			return
+		}
+
+		inbox := path.Join(ROOT, u, "private", "inbox", "raw")
+
+		err = os.MkdirAll(inbox, 0700)
+		if err != nil {
+			c.JSON(500, gin.H{"error": err.Error()})
+			return
+		}
+
+		fn := path.Join(inbox, fmt.Sprintf("%d.%d", time.Now().UnixNano(), os.Getpid()))
+
+		f, err := os.OpenFile(fn, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
+		if err != nil {
+			c.JSON(500, gin.H{"error": err.Error()})
+			return
+		}
+
+		_, err = io.Copy(f, c.Request.Body)
+		if err != nil {
+			f.Close()
+
+			c.JSON(500, gin.H{"error": err.Error()})
+			return
+		}
+		f.Close()
+
+		err = chown(u, fn)
+		if err != nil {
+			c.JSON(500, gin.H{"error": err.Error()})
+			return
+		}
+
+		err = chown(u, inbox)
+		if err != nil {
+			c.JSON(500, gin.H{"error": err.Error()})
+			return
+		}
+
+		c.String(200, "OK")
 	})
 
 	r.GET("/sub/:user", func(c *gin.Context) {
