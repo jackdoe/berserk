@@ -67,6 +67,7 @@ Usage:
         │   ├── clear
         │   ├── id
         │   ├── less
+        │   ├── mutt
         │   ├── locale
         │   ├── nnn
         │   ├── talk
@@ -141,8 +142,20 @@ INBOX:
 I am experimenting with some way to receive messages (without mail)
 
 example:
-    echo "XYZ" | curl -d@- https://berserk.red/inbox/raw/jack
 
-this will create file in ~jack/private/inbox/raw with the message
-"XYZ" in it
+cat <<EOF |  curl -XPOST --data-binary @- https://berserk.red/mail/jack
+From: John Doe <jdoe@machine.example>
+To: Mary Smith <mary@example.net>
+Subject: Saying Hello
+Date: Fri, 21 Nov 1997 09:55:06 -0600
+Message-ID: <1234@local.machine.example>
+
+This is a message just to say hello.
+So, "Hello".
+EOF
+
+
+
+this will create file in ~jack/Maildir/new with the mail inside
+
 
