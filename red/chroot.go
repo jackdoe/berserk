@@ -1,5 +1,12 @@
 package main
 
+import (
+	"fmt"
+	"io/ioutil"
+	"os"
+	"path"
+)
+
 var BASIC_CHROOT = []string{
 	"/lib64/ld-linux-x86-64.so.2",
 	"/lib/terminfo/v/vt102",
@@ -141,4 +148,65 @@ var BASIC_CHROOT = []string{
 	"/etc/services",
 	"/etc/nsswitch.conf",
 	"/etc/hosts",
+}
+
+func chroot(u *User) error {
+	dev := path.Join(u.Home, "dev")
+	err := os.MkdirAll(dev, 0775)
+	if err != nil {
+		return err
+	}
+
+	err = os.MkdirAll(path.Join(u.Home, "log"), 0700)
+	if err != nil {
+		return err
+	}
+
+	etc := path.Join(u.Home, "etc")
+	err = os.MkdirAll(etc, 0775)
+	if err != nil {
+		return err
+	}
+
+	err = mknod(path.Join(dev, "null"), 1, 3)
+	if err != nil {
+		return err
+	}
+
+	err = mknod(path.Join(dev, "tty"), 5, 0)
+	if err != nil {
+		return err
+	}
+
+	err = mknod(path.Join(dev, "zero"), 1, 5)
+	if err != nil {
+		return err
+	}
+
+	err = mknod(path.Join(dev, "random"), 1, 8)
+	if err != nil {
+		return err
+	}
+
+	err = ioutil.WriteFile(path.Join(etc, "passwd"), []byte(fmt.Sprintf("%s:x:%d:%d:GECOS,,,:/:/bin/bash\n", u.Name, u.Uid, u.Gid)), 0755)
+	if err != nil {
+		return err
+	}
+
+	err = ioutil.WriteFile(path.Join(etc, "profile"), []byte(`
+PS1="\033[1;31m\]\\h:\\w\\$\033[00m\] "
+HOME=/
+MAIL=/Maildir/
+
+`), 0755)
+	if err != nil {
+		return err
+	}
+
+	err = fcopy(u.Home, BASIC_CHROOT...)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

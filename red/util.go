@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"syscall"
 
+	"golang.org/x/crypto/ssh"
 	"golang.org/x/sys/unix"
 )
 
@@ -91,18 +92,40 @@ func uidgid(u string) (int, int, error) {
 	return int(uid), int(gid), nil
 }
 
-func chown(u string, dirs ...string) error {
-	uid, gid, err := uidgid(u)
-	if err != nil {
-		return err
-	}
-
+func chown(uid int, gid int, dirs ...string) error {
 	for _, p := range dirs {
-		err = os.Chown(p, int(uid), int(gid))
+		err := os.Chown(p, int(uid), int(gid))
 		if err != nil {
 			return err
 		}
 	}
 
+	return nil
+}
+
+func keyIsValid(key []byte) error {
+	_, _, _, _, err := ssh.ParseAuthorizedKey(key)
+	return err
+}
+
+func appendAuthorizedKey(p string, key []byte) error {
+	err := keyIsValid(key)
+	if err != nil {
+		return err
+	}
+	f, err := os.OpenFile(p, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0600)
+	if err != nil {
+		return err
+	}
+
+	defer f.Close()
+
+	if _, err = f.Write(key); err != nil {
+		return err
+	}
+
+	if _, err = f.WriteString("\n"); err != nil {
+		return err
+	}
 	return nil
 }
