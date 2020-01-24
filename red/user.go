@@ -29,6 +29,10 @@ func NewUser(u string) (*User, error) {
 		return nil, err
 	}
 
+	if uid < 1000 {
+		return nil, fmt.Errorf("invalid user")
+	}
+
 	return &User{Name: u, Home: path.Join(ROOT, u), Uid: uid, Gid: gid}, nil
 }
 
@@ -163,7 +167,7 @@ func (u *User) Disable() error {
 
 func userIsValid(u string) error {
 	if len(u) < 1 || len(u) > 8 || !isAZ(u) || BLACKLIST[u] {
-		return fmt.Errorf("user is blacklisted, only <=8 a-z usernames are allowed")
+		return fmt.Errorf("user is blacklisted, only lte 8 characters and a-z usernames are allowed")
 	}
 	return nil
 }

@@ -48,22 +48,6 @@ func main() {
 		c.String(200, fmt.Sprintf(AFTER_REGISTER, u.Name, u.Name))
 	})
 
-	r.GET("/~:user", func(c *gin.Context) {
-		c.Redirect(302, "/~"+c.Param("user")+"/")
-	})
-
-	r.GET("/", func(c *gin.Context) {
-		c.String(200, SLASH)
-	})
-
-	r.GET("/tos", func(c *gin.Context) {
-		c.String(200, LICENSE)
-	})
-
-	r.GET("/thanks_for_paying", func(c *gin.Context) {
-		c.String(200, THANKS_FOR_PAYING)
-	})
-
 	r.GET("/~:user/*path", func(c *gin.Context) {
 		rp := c.Param("path")
 		u, err := NewUser(c.Param("user"))
@@ -86,7 +70,7 @@ func main() {
 			p = l
 		}
 
-		// dont allow symlinks leading outside of home
+		// dont allow symlinks leading outside of home/public_html
 		if !strings.HasPrefix(p, local) {
 			c.String(418, "out of home")
 			return
@@ -102,14 +86,10 @@ func main() {
 			return
 		}
 
+		// in case of confusion someone might send to ~user
 		u, err := NewUser(strings.Trim(c.Param("user"), "~"))
 		if err != nil {
 			c.JSON(400, gin.H{"error": err.Error()})
-			return
-		}
-
-		if u.Uid < 1000 {
-			c.JSON(400, gin.H{"error": "invalid user"})
 			return
 		}
 
@@ -120,6 +100,22 @@ func main() {
 		}
 
 		c.String(200, "OK")
+	})
+
+	r.GET("/~:user", func(c *gin.Context) {
+		c.Redirect(302, "/~"+c.Param("user")+"/")
+	})
+
+	r.GET("/", func(c *gin.Context) {
+		c.String(200, SLASH)
+	})
+
+	r.GET("/tos", func(c *gin.Context) {
+		c.String(200, LICENSE)
+	})
+
+	r.GET("/thanks_for_paying", func(c *gin.Context) {
+		c.String(200, THANKS_FOR_PAYING)
 	})
 
 	r.GET("/sub/:user", func(c *gin.Context) {
