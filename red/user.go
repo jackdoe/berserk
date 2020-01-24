@@ -106,7 +106,12 @@ func chroot(u string, p string) error {
 		return err
 	}
 
-	err = ioutil.WriteFile(path.Join(etc, "profile"), []byte(`PS1="\033[1;31m\]\\h:\\w\\$\033[00m\] "`), 0755)
+	err = ioutil.WriteFile(path.Join(etc, "profile"), []byte(`
+PS1="\033[1;31m\]\\h:\\w\\$\033[00m\] "
+HOME=/
+MAIL=/Maildir/
+
+`), 0755)
 	if err != nil {
 		return err
 	}
@@ -184,14 +189,11 @@ func addUser(u string, key []byte) error {
 		return err
 	}
 
-	err = os.MkdirAll(path.Join(home, "private"), 0700)
-	if err != nil {
-		return err
-	}
-
-	err = os.MkdirAll(path.Join(home, "log"), 0700)
-	if err != nil {
-		return err
+	for _, dir := range []string{"tmp", "Mail", "private", "Maildir", path.Join("Maildir", "cur"), path.Join("Maildir", "new"), path.Join("Maildir", "tmp"), "log"} {
+		err = os.MkdirAll(path.Join(home, dir), 0700)
+		if err != nil {
+			return err
+		}
 	}
 
 	err = run("/usr/sbin/adduser", "--firstuid", "1000", "--gecos", "GECOS", "--home", home, "--no-create-home", "--disabled-password", "--add_extra_groups", u)

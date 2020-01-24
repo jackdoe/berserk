@@ -1,16 +1,18 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
-	"io"
 	"log"
 	"net/http"
 	"net/http/httputil"
+	"net/mail"
 	"os"
 	"path"
 	"path/filepath"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -20,6 +22,14 @@ import (
 const ROOT = "/mnt/home_attached"
 
 func main() {
+	hostname, err := os.Hostname()
+	if err != nil {
+		panic(err)
+	}
+
+	pid := os.Getpid()
+	counter := uint64(0)
+
 	r := gin.Default()
 
 	r.POST("/register/:user", func(c *gin.Context) {
@@ -95,10 +105,14 @@ func main() {
 		c.File(p)
 	})
 
-	r.POST("/inbox/raw/:user", func(c *gin.Context) {
+	r.POST("/mail/:user", func(c *gin.Context) {
 		u := strings.Trim(c.Param("user"), "~")
 
-		defer c.Request.Body.Close()
+		body, err := c.GetRawData()
+		if err != nil {
+			c.JSON(400, gin.H{"error": err.Error()})
+			return
+		}
 
 		uid, _, err := uidgid(u)
 		if err != nil {
@@ -110,26 +124,25 @@ func main() {
 			c.JSON(400, gin.H{"error": "invalid user"})
 			return
 		}
-
-		inbox := path.Join(ROOT, u, "private", "inbox", "raw")
-
-		err = os.MkdirAll(inbox, 0700)
+		_, err = mail.ReadMessage(bytes.NewBuffer(body))
 		if err != nil {
-			c.JSON(500, gin.H{"error": err.Error()})
+			c.JSON(400, gin.H{"error": err.Error(), "body": string(body)})
 			return
 		}
 
-		fn := path.Join(inbox, fmt.Sprintf("%d.%d", time.Now().UnixNano(), os.Getpid()))
+		basename := fmt.Sprintf("%v.M%vP%v_%v.%v", time.Now().Unix(), time.Now().Nanosecond()/1000, pid, atomic.AddUint64(&counter, 1), hostname)
 
+		fn := path.Join(ROOT, u, "Maildir", "tmp", basename)
 		f, err := os.OpenFile(fn, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
 		if err != nil {
 			c.JSON(500, gin.H{"error": err.Error()})
 			return
 		}
 
-		_, err = io.Copy(f, c.Request.Body)
+		size, err := f.Write(body)
 		if err != nil {
 			f.Close()
+			_ = os.Remove(fn)
 
 			c.JSON(500, gin.H{"error": err.Error()})
 			return
@@ -138,12 +151,17 @@ func main() {
 
 		err = chown(u, fn)
 		if err != nil {
+			_ = os.Remove(fn)
+
 			c.JSON(500, gin.H{"error": err.Error()})
 			return
 		}
 
-		err = chown(u, inbox)
+		newname := path.Join(ROOT, u, "Maildir", "new", fmt.Sprintf("%v,S=%v", basename, size))
+		err = os.Rename(fn, newname)
 		if err != nil {
+			_ = os.Remove(fn)
+
 			c.JSON(500, gin.H{"error": err.Error()})
 			return
 		}
@@ -198,16 +216,16 @@ func main() {
 			// FIXME: allowing test, lets see how many people will scam
 			//}
 
-			pub := path.Join(ROOT, u, "public_html")
-			priv := path.Join(ROOT, u, "private")
-
-			if n.TxnType == "subscr_signup" {
-				for _, p := range []string{pub, priv} {
+			dirs := []string{"tmp", "Mail", "public_html", "priv", "Maildir", path.Join("Maildir", "cur"), path.Join("Maildir", "new"), path.Join("Maildir", "tmp")}
+			if n.TxnType == "subscr_signup" || n.TxnType == "cart" {
+				for _, dir := range dirs {
+					p := path.Join(ROOT, u, dir)
 					_ = appendUserLog(u, "status.txt", []byte(fmt.Sprintf("chown %s %s", u, p)))
 					_ = chown(u, p)
 				}
 			} else if n.TxnType == "subscr_cancel" {
-				for _, p := range []string{pub, priv} {
+				for _, dir := range dirs {
+					p := path.Join(ROOT, u, dir)
 					_ = appendUserLog(u, "status.txt", []byte(fmt.Sprintf("chown %s %s", u, p)))
 					_ = chown("root", p)
 				}
