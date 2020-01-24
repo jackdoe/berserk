@@ -4,7 +4,7 @@ set -e
 
 rm -rf lib bin usr lib64 etc
 
-for i in talk nudoku strace mv clear nnn nano touch mkdir locale tar gzip tree id bash vim grep less more echo cat ls hostname; do
+for i in mutt talk nudoku strace mv clear nnn nano touch mkdir locale tar gzip tree id bash vim grep less more echo cat ls hostname; do
         path=$(which $i)
 
         mkdir -p .$(dirname $path)
