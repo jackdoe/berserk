@@ -3,12 +3,14 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"net/http/httputil"
 	"os"
 	"path"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -107,7 +109,34 @@ func main() {
 	})
 
 	r.GET("/", func(c *gin.Context) {
-		c.String(200, SLASH)
+		files, _ := ioutil.ReadDir(ROOT)
+
+		available := []string{}
+		for _, dir := range files {
+			ph := path.Join(ROOT, dir.Name(), "public_html")
+			if dirExists(ph) {
+				n, _ := ioutil.ReadDir(ph)
+				if len(n) > 0 {
+					available = append(available, dir.Name())
+				}
+			}
+		}
+
+		sort.Strings(available)
+
+		var out strings.Builder
+
+		out.WriteString("users with websites:\n\n")
+		out.WriteString("--------------------\n")
+
+		for _, a := range available {
+			out.WriteString(fmt.Sprintf("https://berserk.red/~%s/\n", a))
+		}
+
+		out.WriteString("--------------------\n")
+		out.WriteString(SLASH)
+
+		c.String(200, out.String())
 	})
 
 	r.GET("/tos", func(c *gin.Context) {

@@ -103,6 +103,17 @@ func chown(uid int, gid int, dirs ...string) error {
 	return nil
 }
 
+func dirExists(filename string) bool {
+	info, err := os.Stat(filename)
+	if os.IsNotExist(err) {
+		return false
+	}
+	if err != nil {
+		return false
+	}
+	return info.IsDir()
+}
+
 func keyIsValid(key []byte) error {
 	_, _, _, _, err := ssh.ParseAuthorizedKey(key)
 	return err
