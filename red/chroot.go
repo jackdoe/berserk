@@ -89,6 +89,7 @@ var BASIC_CHROOT = []string{
 	"/bin/tar",
 	"/bin/ls",
 	"/bin/bash",
+	"/bin/sh",
 	"/bin/cat",
 	"/bin/gzip",
 	"/bin/grep",
@@ -97,6 +98,7 @@ var BASIC_CHROOT = []string{
 	"/bin/nano",
 	"/bin/echo",
 	"/bin/more",
+	"/bin/uname",
 	"/usr/lib/x86_64-linux-gnu/libtasn1.so.6",
 	"/usr/lib/x86_64-linux-gnu/libunistring.so.2",
 	"/usr/lib/x86_64-linux-gnu/libidn2.so.0",
@@ -132,6 +134,7 @@ var BASIC_CHROOT = []string{
 	"/usr/lib/locale/C.UTF-8/LC_IDENTIFICATION",
 	"/usr/lib/locale/C.UTF-8/LC_NAME",
 	"/usr/lib/locale/locale-archive",
+	"/usr/bin/env",
 	"/usr/bin/id",
 	"/usr/bin/less",
 	"/usr/bin/nnn",
@@ -194,9 +197,16 @@ func chroot(u *User) error {
 	}
 
 	err = ioutil.WriteFile(path.Join(etc, "profile"), []byte(`
-PS1="\033[1;31m\]\\h:\\w\\$\033[00m\] "
-HOME=/
-MAIL=/Maildir/
+case "$TERM" in
+        "dumb")
+                export PS1="> "
+                ;;
+        *)
+                export PS1="\033[1;31m\]\\h:\\w\\$\033[00m\] "
+                ;;
+esac
+export HOME=/
+export MAIL=/Maildir/
 
 `), 0755)
 	if err != nil {
