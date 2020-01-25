@@ -29,13 +29,7 @@ func main() {
 			c.JSON(400, gin.H{"error": err.Error()})
 			return
 		}
-		err = CreateSystemUser(c.Param("user"), key)
-		if err != nil {
-			c.JSON(500, gin.H{"error": err.Error()})
-			return
-		}
-
-		u, err := NewUser(c.Param("user"))
+		u, err := CreateSystemUser(c.Param("user"), key)
 		if err != nil {
 			c.JSON(500, gin.H{"error": err.Error()})
 			return

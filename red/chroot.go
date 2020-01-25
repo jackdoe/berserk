@@ -160,7 +160,12 @@ func chroot(u *User) error {
 		return err
 	}
 
-	err = os.MkdirAll(path.Join(u.Home, "log"), 0700)
+	err = os.MkdirAll(path.Join(u.Home, "log"), 0750)
+	if err != nil {
+		return err
+	}
+
+	err = chown(0, u.Gid, path.Join(u.Home, "log"))
 	if err != nil {
 		return err
 	}

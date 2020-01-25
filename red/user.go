@@ -46,7 +46,7 @@ func (u *User) LogP(logname string, data []byte) {
 
 func (u *User) Log(logname string, data []byte) error {
 	filename := path.Join(ROOT, u.Name, "log", logname)
-	f, err := os.OpenFile(filename, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0600)
+	f, err := os.OpenFile(filename, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0640)
 	if err != nil {
 		return err
 	}
@@ -66,7 +66,9 @@ func (u *User) Log(logname string, data []byte) error {
 		return err
 	}
 
-	return f.Close()
+	_ = f.Close()
+
+	return chown(0, u.Gid, filename)
 }
 
 func (u *User) SetAuthorizedKeyFile(key []byte) error {
@@ -174,45 +176,50 @@ func userIsValid(u string) error {
 	return nil
 }
 
-func CreateSystemUser(username string, key []byte) error {
+func CreateSystemUser(username string, key []byte) (*User, error) {
 	err := keyIsValid(key)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	err = userIsValid(username)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	_, err = user.Lookup(username)
 	if err == nil {
-		return fmt.Errorf("already exists")
+		return nil, fmt.Errorf("already exists")
 	}
 
 	if _, ok := err.(user.UnknownUserError); !ok && err != nil {
-		return err
+		return nil, err
 	}
 
 	err = run("/usr/sbin/adduser", "--firstuid", "1000", "--gecos", "GECOS", "--home", path.Join(ROOT, username), "--no-create-home", "--disabled-password", "--add_extra_groups", username)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	err = run("/usr/sbin/setquota", username, "1G", "1G", "10000", "10000", ROOT)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	u, err := NewUser(username)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	err = u.SetAuthorizedKeyFile(key)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	return chroot(u)
+	err = chroot(u)
+	if err != nil {
+		return nil, err
+	}
+
+	return u, nil
 }
