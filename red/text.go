@@ -6,8 +6,7 @@ experimental, use it at your own risk
 also people have local shell on the machine, despite automatic
 security updates, it is safe to assume the machine hacked.
 
-
-------------------
+--------------------
 
 Hi,
 
@@ -85,8 +84,7 @@ Usage:
 
 -b
 
-
-------------------
+--------------------
 
 there is no docker, no cloud, no replication, no nothing
 
@@ -172,7 +170,7 @@ TODO:
 
 * dont chroot?
 
-------------------
+--------------------
 
 Why?
 
@@ -190,7 +188,7 @@ they are lost forever (I dont remember what I wrote, but I doubt it is
 a big loss). Anyway, it was a lot of fun trying to quit vi for the
 first time haha.
 
-------------------
+--------------------
 
 INBOX:
 
