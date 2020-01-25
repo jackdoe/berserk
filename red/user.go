@@ -43,6 +43,7 @@ func (u *User) LogP(logname string, data []byte) {
 	}
 
 }
+
 func (u *User) Log(logname string, data []byte) error {
 	filename := path.Join(ROOT, u.Name, "log", logname)
 	f, err := os.OpenFile(filename, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0600)
