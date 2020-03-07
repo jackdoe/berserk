@@ -18,10 +18,7 @@ func main() {
 	defer db.Close()
 
 	if f.Replace {
-		_, err := db.Exec("DELETE FROM documents WHERE dataset_key = $1", f.Dataset.DatasetKey)
-		if err != nil {
-			log.Fatal(err)
-		}
+		models.MustDeleteAll(db, f.Dataset.DatasetKey)
 	}
 
 	err := models.UpsertDataset(db, f.Dataset)
@@ -31,15 +28,14 @@ func main() {
 
 	defer models.MustRecount(db, f.Dataset)
 
-	tx, err := db.Begin()
-	if err != nil {
-		log.Fatal(err)
-	}
+	docs := make(chan models.Document, 0)
+	done := make(chan bool)
+	go func() {
+		models.InsertMany(db, f.BatchSize, docs)
+		done <- true
+	}()
 
 	r := bufio.NewReader(os.Stdin)
-	rollback := false
-	i := 0
-	docs := []models.Document{}
 	for {
 		data, err := r.ReadBytes('\n')
 		if err == io.EOF {
@@ -47,7 +43,6 @@ func main() {
 		}
 		if err != nil {
 			log.Printf("%v, err: %v", string(data), err.Error())
-			rollback = true
 			break
 		}
 
@@ -55,61 +50,18 @@ func main() {
 		err = json.Unmarshal(data, &dict)
 		if err != nil {
 			log.Printf("%v, err: %v", string(data), err.Error())
-			rollback = true
-			break
+			continue
 		}
 
 		d, err := models.ToDocument(f.DocKeyField, f.DocTagsField, dict)
 		if err != nil {
 			log.Printf("%v, err: %v", dict, err.Error())
-			rollback = true
-			break
+			continue
 		}
 
 		d.DatasetKey = f.Dataset.DatasetKey
-		docs = append(docs, d)
-
-		i++
-		if i%f.BatchSize == 0 {
-			err = models.UpsertDocument(tx, docs)
-			if err != nil {
-				log.Printf("%v, err: %v", dict, err.Error())
-				rollback = true
-				break
-			}
-
-			err = tx.Commit()
-			if err != nil {
-				log.Fatal(err)
-			}
-
-			tx, err = db.Begin()
-			if err != nil {
-				log.Fatal(err)
-			}
-
-			docs = []models.Document{}
-			log.Printf("%d ...", i)
-		}
+		docs <- d
 	}
-
-	err = models.UpsertDocument(tx, docs)
-	if err != nil {
-		log.Printf("%v, err: %v", docs, err.Error())
-		rollback = true
-	}
-
-	if rollback {
-		err = tx.Rollback()
-		if err != nil {
-			log.Fatal(err)
-		}
-		log.Printf("rolled back")
-		os.Exit(1)
-	} else {
-		err = tx.Commit()
-		if err != nil {
-			log.Fatal(err)
-		}
-	}
+	close(docs)
+	<-done
 }

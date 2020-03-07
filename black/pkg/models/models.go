@@ -130,6 +130,96 @@ func ToDocument(keyField string, tagsKeyField string, in map[string]interface{})
 	}, nil
 }
 
+func MustDeleteAll(db *sql.DB, dsKey string) {
+	_, err := db.Exec("DELETE FROM documents WHERE dataset_key = $1", dsKey)
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
+func FindDS(db *sql.DB, dsKey string) (Dataset, error) {
+	var ds Dataset
+	row := db.QueryRow("SELECT document_count, license, key, name, tags, created_at, updated_at from datasets WHERE key = $1", dsKey)
+	err := row.Scan(&ds.DocumentCount, &ds.License, &ds.DatasetKey, &ds.Name, &ds.Tags, &ds.CreatedAt, &ds.UpdatedAt)
+	return ds, err
+}
+
+func FindAllDS(db *sql.DB) ([]Dataset, error) {
+	rows, err := db.Query("SELECT document_count, license, key, name, tags, created_at, updated_at from datasets ORDER BY name")
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := []Dataset{}
+	for rows.Next() {
+		var ds Dataset
+
+		err := rows.Scan(&ds.DocumentCount, &ds.License, &ds.DatasetKey, &ds.Name, &ds.Tags, &ds.CreatedAt, &ds.UpdatedAt)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, ds)
+	}
+	return out, nil
+}
+
+func InsertMany(db *sql.DB, batchSize int, in chan Document) {
+	tx, err := db.Begin()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	rollback := false
+	i := 0
+
+	docs := []Document{}
+	for d := range in {
+		docs = append(docs, d)
+
+		i++
+		if i%batchSize == 0 {
+			err = UpsertDocument(tx, docs)
+			if err != nil {
+				log.Printf("%v, err: %v", d, err.Error())
+				rollback = true
+				break
+			}
+
+			err = tx.Commit()
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			tx, err = db.Begin()
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			docs = []Document{}
+			log.Printf("%d ...", i)
+		}
+	}
+
+	err = UpsertDocument(tx, docs)
+	if err != nil {
+		log.Printf("%v, err: %v", docs, err.Error())
+		rollback = true
+	}
+
+	if rollback {
+		err = tx.Rollback()
+		if err != nil {
+			log.Fatal(err)
+		}
+		log.Printf("rolled back")
+	} else {
+		err = tx.Commit()
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
+}
+
 func ReplaceSQL(old, searchPattern string) string {
 	tmpCount := strings.Count(old, searchPattern)
 	for m := 1; m <= tmpCount; m++ {

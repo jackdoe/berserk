@@ -21,27 +21,25 @@ func main() {
 	r.LazyQuotes = true
 	r.TrimLeadingSpace = true
 
-	tx, err := db.Begin()
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	err = models.UpsertDataset(tx, f.Dataset)
-	if err != nil {
-		tx.Rollback()
-		log.Fatal(err)
-	}
-
 	if f.Replace {
-		_, err = tx.Exec("DELETE FROM documents WHERE dataset_key = ?", f.Dataset.DatasetKey)
-		if err != nil {
-			tx.Rollback()
-			log.Fatal(err)
-		}
+		models.MustDeleteAll(db, f.Dataset.DatasetKey)
 	}
-	rollback := false
-	var header []string
 
+	err := models.UpsertDataset(db, f.Dataset)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	defer models.MustRecount(db, f.Dataset)
+
+	docs := make(chan models.Document, 0)
+	done := make(chan bool)
+	go func() {
+		models.InsertMany(db, f.BatchSize, docs)
+		done <- true
+	}()
+
+	var header []string
 	for {
 		record, err := r.Read()
 		if err == io.EOF {
@@ -49,7 +47,6 @@ func main() {
 		}
 		if err != nil {
 			log.Printf("%v, err: %v", record, err.Error())
-			rollback = true
 			break
 		}
 
@@ -63,35 +60,10 @@ func main() {
 			dict[header[i]] = record[i]
 		}
 
-		d, err := models.ToDocument(f.DocKeyField, dict)
-
+		d, err := models.ToDocument(f.DocKeyField, f.DocTagsField, dict)
 		d.DatasetKey = f.Dataset.DatasetKey
-
-		if err != nil {
-			log.Printf("%v, err: %v", record, err.Error())
-			rollback = true
-			break
-		}
-
-		err = models.UpsertDocument(tx, d)
-		if err != nil {
-			log.Printf("%v, err: %v", record, err.Error())
-			rollback = true
-			break
-		}
+		docs <- d
 	}
-
-	if rollback {
-		err = tx.Rollback()
-		if err != nil {
-			log.Fatal(err)
-		}
-		os.Exit(1)
-	} else {
-		err = tx.Commit()
-		if err != nil {
-			log.Fatal(err)
-		}
-		os.Exit(0)
-	}
+	close(docs)
+	<-done
 }

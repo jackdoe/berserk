@@ -16,11 +16,11 @@ import (
 )
 
 type ScanRequest struct {
-	DatasetKey   string   `json:"dataset_key" binding:"required"`
+	DatasetKey   string   `json:"dataset_key" binding:"required" uri:"dataset_key"`
 	Tags         []string `json:"tags"`
 	DocumentKeys []string `json:"document_keys"`
-	Offset       uint64   `json:"offset"`
-	Limit        uint64   `json:"limit"`
+	Offset       uint64   `json:"offset" uri:"offset"`
+	Limit        uint64   `json:"limit" uri:"limit"`
 }
 
 type LookupRequest struct {
@@ -41,16 +41,20 @@ func main() {
 		})
 	})
 
-	r.POST("/s", func(c *gin.Context) {
-		var j ScanRequest
-		if err := c.ShouldBindJSON(&j); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	r.GET("/", func(c *gin.Context) {
+		ds, err := models.FindAllDS(db)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
 
-		var ds models.Dataset
-		row := db.QueryRow("SELECT document_count, license, key, name, tags, created_at, updated_at from datasets WHERE key = $1", j.DatasetKey)
-		err := row.Scan(&ds.DocumentCount, &ds.License, &ds.DatasetKey, &ds.Name, &ds.Tags, &ds.CreatedAt, &ds.UpdatedAt)
+		c.IndentedJSON(200, gin.H{
+			"datasets": ds,
+		})
+	})
+
+	stream := func(c *gin.Context, j ScanRequest) {
+		ds, err := models.FindDS(db, j.DatasetKey)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
@@ -61,7 +65,7 @@ func main() {
 		}
 
 		query := "SELECT dataset_key, document_key, data, tags, created_at, updated_at FROM documents WHERE dataset_key = ? "
-		args := []interface{}{j.DatasetKey}
+		args := []interface{}{ds.DatasetKey}
 
 		if len(j.Tags) != 0 {
 			query += " AND tags @> ? "
@@ -74,11 +78,9 @@ func main() {
 		}
 
 		query += " LIMIT ? OFFSET ?"
-
-		query = models.ReplaceSQL(query, "?")
-
 		args = append(args, j.Limit, j.Offset)
 
+		query = models.ReplaceSQL(query, "?")
 		rows, err := db.Query(query, args...)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -126,6 +128,24 @@ func main() {
 		s.WriteArrayEnd()
 		s.WriteObjectEnd()
 		s.Flush()
+	}
+
+	r.GET("/s/:dataset_key/:limit/:offset", func(c *gin.Context) {
+		var j ScanRequest
+		if err := c.ShouldBindUri(&j); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+		stream(c, j)
+	})
+
+	r.POST("/s", func(c *gin.Context) {
+		var j ScanRequest
+		if err := c.ShouldBindJSON(&j); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+		stream(c, j)
 	})
 
 	log.Fatal(r.Run())
