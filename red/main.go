@@ -92,7 +92,7 @@ func main() {
 		}
 
 		sort.Slice(available, func(i, j int) bool {
-			return available[i].dir < available[j].dir
+			return available[j].t.Before(available[i].t)
 		})
 
 		var out strings.Builder
