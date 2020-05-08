@@ -3,6 +3,9 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/dustin/go-humanize"
+	"github.com/gin-gonic/gin"
+	ipn "github.com/jackdoe/gin-ipn"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -12,9 +15,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
-
-	"github.com/gin-gonic/gin"
-	ipn "github.com/jackdoe/gin-ipn"
+	"time"
 )
 
 const ROOT = "/mnt/home_attached"
@@ -44,92 +45,68 @@ func main() {
 		c.String(200, fmt.Sprintf(AFTER_REGISTER, u.Name, u.Name))
 	})
 
-	r.GET("/~:user/*path", func(c *gin.Context) {
-		rp := c.Param("path")
-		u, err := NewUser(c.Param("user"))
-		if err != nil {
-			c.JSON(400, gin.H{"error": err.Error()})
-			return
-		}
-
-		// cleanup golang http.ServeFile special handling of index.html
-		if strings.HasSuffix(rp, "/index.html") {
-			c.Redirect(302, "/~"+u.Name+"/"+strings.TrimSuffix(rp, "/index.html"))
-			return
-		}
-
-		local := path.Join(u.Home, "public_html")
-		p := path.Join(local, filepath.Clean(rp))
-
-		l, err := os.Readlink(p)
-		if err == nil {
-			p = l
-		}
-
-		// dont allow symlinks leading outside of home/public_html
-		if !strings.HasPrefix(p, local) {
-			c.String(418, "out of home")
-			return
-		}
-
-		c.File(p)
-	})
-
-	r.POST("/mail/:user", func(c *gin.Context) {
-		body, err := c.GetRawData()
-		if err != nil {
-			c.JSON(400, gin.H{"error": err.Error()})
-			return
-		}
-
-		// in case of confusion someone might send to ~user
-		u, err := NewUser(strings.Trim(c.Param("user"), "~"))
-		if err != nil {
-			c.JSON(400, gin.H{"error": err.Error()})
-			return
-		}
-
-		err = u.Mail(body)
-		if err != nil {
-			c.JSON(500, gin.H{"error": err.Error()})
-			return
-		}
-
-		c.String(200, "OK")
-	})
-
 	r.GET("/~:user", func(c *gin.Context) {
 		c.Redirect(302, "/~"+c.Param("user")+"/")
 	})
 
 	r.GET("/", func(c *gin.Context) {
+		c.Header("Content-Type", "text/html; charset=utf-8")
+
 		files, _ := ioutil.ReadDir(ROOT)
 
-		available := []string{}
+		type homedir struct {
+			dir   string
+			t     time.Time
+			count int
+		}
+		available := []*homedir{}
 		for _, dir := range files {
 			ph := path.Join(ROOT, dir.Name(), "public_html")
 			if dirExists(ph) {
-				n, _ := ioutil.ReadDir(ph)
-				if len(n) > 0 {
-					available = append(available, dir.Name())
+				ds, _ := os.Stat(ph)
+
+				if ds.Mode().Perm()&4 == 0 {
+					// no permissions
+					continue
+				}
+
+				hd := &homedir{dir: dir.Name()}
+
+				_ = filepath.Walk(ph, func(path string, info os.FileInfo, err error) error {
+					if info.IsDir() {
+						return nil
+					}
+
+					t := info.ModTime()
+					if hd.t.Before(t) {
+						hd.t = t
+					}
+					hd.count++
+					return nil
+				})
+
+				if hd.count > 0 {
+					available = append(available, hd)
 				}
 			}
 		}
 
-		sort.Strings(available)
+		sort.Slice(available, func(i, j int) bool {
+			return available[i].dir < available[j].dir
+		})
 
 		var out strings.Builder
-
+		out.WriteString("<html><head><title>berserk.red</title></head><body><pre>")
 		out.WriteString("users with websites:\n\n")
-		out.WriteString("--------------------\n")
-
 		for _, a := range available {
-			out.WriteString(fmt.Sprintf("https://berserk.red/~%s/\n", a))
+			href := fmt.Sprintf("https://berserk.red/~%s/", a.dir)
+			out.WriteString(fmt.Sprintf("<a href='%s'>%s</a> updated %s\n", href, href, humanize.Time(a.t)))
+			out.WriteString(fmt.Sprintf("<iframe src='%s' width='60%%' height='15%%'></iframe><br>\n\n", href))
 		}
 
-		out.WriteString("--------------------\n")
 		out.WriteString(SLASH)
 
+		out.WriteString("</pre></body></html>")
 		c.String(200, out.String())
 	})
 
