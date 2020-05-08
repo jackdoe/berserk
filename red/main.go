@@ -100,8 +100,7 @@ func main() {
 		out.WriteString("users with websites:\n\n")
 		for _, a := range available {
 			href := fmt.Sprintf("https://berserk.red/~%s/", a.dir)
-			out.WriteString(fmt.Sprintf("<a href='%s'>%s</a> updated %s\n", href, href, humanize.Time(a.t)))
-			out.WriteString(fmt.Sprintf("<iframe src='%s' width='60%%' height='15%%'></iframe><br>\n\n", href))
+			out.WriteString(fmt.Sprintf("<a href='%s'>%s</a>\nupdated %s\n\n", href, href, humanize.Time(a.t)))
 		}
 
 		out.WriteString(SLASH)
