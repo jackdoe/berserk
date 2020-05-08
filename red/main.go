@@ -21,7 +21,6 @@ import (
 const ROOT = "/mnt/home_attached"
 
 func main() {
-
 	r := gin.Default()
 
 	r.POST("/register/:user", func(c *gin.Context) {
@@ -63,7 +62,10 @@ func main() {
 		for _, dir := range files {
 			ph := path.Join(ROOT, dir.Name(), "public_html")
 			if dirExists(ph) {
-				ds, _ := os.Stat(ph)
+				ds, err := os.Stat(ph)
+				if err != nil {
+					continue
+				}
 
 				if ds.Mode().Perm()&4 == 0 {
 					// no permissions
