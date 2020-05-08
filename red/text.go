@@ -187,27 +187,6 @@ my wife). Sadly when they shut it down I did not download it and now
 they are lost forever (I dont remember what I wrote, but I doubt it is
 a big loss). Anyway, it was a lot of fun trying to quit vi for the
 first time haha.
-
---------------------
-
-INBOX:
-
-I am experimenting with some way to receive messages (without smtp)
-
-example:
-
-cat <<EOF |  curl -XPOST --data-binary @- https://berserk.red/mail/jack
-From: John Doe <jdoe@machine.example>
-To: Mary Smith <mary@example.net>
-Subject: Saying Hello
-Date: Fri, 21 Nov 1997 09:55:06 -0600
-Message-ID: <1234@local.machine.example>
-
-This is a message just to say hello.
-So, "Hello".
-EOF
-
-this will create file in ~jack/Maildir/new with the mail inside
 `
 
 const THANKS_FOR_PAYING = `
