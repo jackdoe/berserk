@@ -43,6 +43,9 @@ Usage:
        everything under this directory can be accessed via web on
        https://berserk.red/~username/
 
+       gemini is also supported (gemini://gemini.circumlunar.space/)
+       gemini://berserk.red/~username/
+
     public_html/finger.txt
        finger support:
 
