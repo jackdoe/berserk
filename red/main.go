@@ -1,11 +1,10 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/dustin/go-humanize"
-	"github.com/gin-gonic/gin"
-	ipn "github.com/jackdoe/gin-ipn"
+	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -16,6 +15,11 @@ import (
 	"sort"
 	"strings"
 	"time"
+
+	"github.com/dustin/go-humanize"
+	"github.com/gin-gonic/gin"
+	ipn "github.com/jackdoe/gin-ipn"
+	"github.com/mitchellh/go-finger"
 )
 
 const ROOT = "/mnt/home_attached"
@@ -169,6 +173,31 @@ func main() {
 		}
 		return nil
 	})
+
+	go func() {
+		log.Fatal(finger.Serve(finger.HandlerFunc(func(ctx context.Context, w io.Writer, q *finger.Query) {
+			home := path.Join(ROOT, q.Username, "public_html")
+			ds, err := os.Stat(home)
+			if err != nil {
+				w.Write([]byte(fmt.Sprintf("%q not found", q.Username)))
+				return
+			}
+
+			if ds.Mode().Perm()&4 == 0 {
+				w.Write([]byte(fmt.Sprintf("%q not found", q.Username)))
+				return
+			}
+
+			w.Write([]byte(fmt.Sprintf("printing https://berserk.red/~%s/finger.txt\n%s\n\n", q.Username, strings.Repeat("-", 8))))
+
+			b, err := ioutil.ReadFile(path.Join(home, "finger.txt"))
+			if err != nil {
+				w.Write([]byte(fmt.Sprintf("nop, finger.txt is missing\ncheck out https://berserk.red/~%s though\n", q.Username)))
+			} else {
+				w.Write(b)
+			}
+		})))
+	}()
 
 	log.Fatal(r.Run(":" + os.Getenv("PORT")))
 }
