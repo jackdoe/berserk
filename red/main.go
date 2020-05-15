@@ -16,10 +16,10 @@ import (
 	"strings"
 	"time"
 
-	gemini "github.com/akarki15/net-gemini"
 	"github.com/dustin/go-humanize"
 	"github.com/gin-gonic/gin"
 	ipn "github.com/jackdoe/gin-ipn"
+	gemini "github.com/jackdoe/net-gemini"
 	"github.com/mitchellh/go-finger"
 )
 
