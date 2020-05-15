@@ -16,6 +16,7 @@ import (
 	"strings"
 	"time"
 
+	gemini "github.com/akarki15/net-gemini"
 	"github.com/dustin/go-humanize"
 	"github.com/gin-gonic/gin"
 	ipn "github.com/jackdoe/gin-ipn"
@@ -173,6 +174,48 @@ func main() {
 		}
 		return nil
 	})
+
+	go func() {
+		gemini.HandleFunc("/~", func(w *gemini.Response, r *gemini.Request) {
+			p := strings.TrimPrefix(r.URL.Path, "/~")
+			if len(p) == 0 {
+				w.SetStatus(gemini.StatusNotFound, "Not Found")
+				return
+			}
+
+			splitted := strings.SplitN(p, "/", 2)
+
+			u, err := NewUser(splitted[0])
+			if err != nil {
+				w.SetStatus(gemini.StatusTemporaryFailure, err.Error())
+				return
+			}
+
+			local := path.Join(u.Home, "public_html")
+			p = local
+			if len(splitted) > 1 {
+				p = path.Join(p, filepath.Clean(splitted[1]))
+			}
+
+			l, err := os.Readlink(p)
+			if err == nil {
+				p = l
+			}
+
+			// dont allow symlinks leading outside of home/public_html
+			if !strings.HasPrefix(p, local) {
+				w.SetStatus(gemini.StatusTemporaryFailure, "out of home")
+				return
+			}
+			gemini.ServeFilePath(p, w, r)
+		})
+
+		gemini.HandleFunc("/", func(w *gemini.Response, r *gemini.Request) {
+			w.Write([]byte(SLASH))
+		})
+
+		log.Fatal(gemini.ListenAndServeTLS(":"+os.Getenv("GEMINI_PORT"), os.Getenv("GEMINI_CRT"), os.Getenv("GEMINI_KEY")))
+	}()
 
 	go func() {
 		log.Fatal(finger.Serve(finger.HandlerFunc(func(ctx context.Context, w io.Writer, q *finger.Query) {
