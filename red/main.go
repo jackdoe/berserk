@@ -179,12 +179,12 @@ func main() {
 			home := path.Join(ROOT, q.Username, "public_html")
 			ds, err := os.Stat(home)
 			if err != nil {
-				w.Write([]byte(fmt.Sprintf("%q not found", q.Username)))
+				w.Write([]byte(fmt.Sprintf("%q not found\n", q.Username)))
 				return
 			}
 
 			if ds.Mode().Perm()&4 == 0 {
-				w.Write([]byte(fmt.Sprintf("%q not found", q.Username)))
+				w.Write([]byte(fmt.Sprintf("%q not found\n", q.Username)))
 				return
 			}
 
