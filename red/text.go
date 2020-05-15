@@ -44,6 +44,15 @@ Usage:
        everything under this directory can be accessed via web on
        https://berserk.red/~username/
 
+    public_html/finger.txt
+       finger support
+
+       $ finger jack@berserk.red
+       printing https://berserk.red/~jack/finger.txt
+       --------
+
+       helloooo!
+
     private/
        your private files
 
