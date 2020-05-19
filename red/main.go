@@ -25,6 +25,54 @@ import (
 
 const ROOT = "/mnt/home_attached"
 
+type homedir struct {
+	dir   string
+	t     time.Time
+	count int
+}
+
+func listAvailableHomeDirs() []*homedir {
+	files, _ := ioutil.ReadDir(ROOT)
+	available := []*homedir{}
+	for _, dir := range files {
+		ph := path.Join(ROOT, dir.Name(), "public_html")
+		if dirExists(ph) {
+			ds, err := os.Stat(ph)
+			if err != nil {
+				continue
+			}
+
+			if ds.Mode().Perm()&4 == 0 {
+				// no permissions
+				continue
+			}
+
+			hd := &homedir{dir: dir.Name()}
+
+			_ = filepath.Walk(ph, func(path string, info os.FileInfo, err error) error {
+				if info.IsDir() {
+					return nil
+				}
+
+				t := info.ModTime()
+				if hd.t.Before(t) {
+					hd.t = t
+				}
+				hd.count++
+				return nil
+			})
+
+			if hd.count > 0 {
+				available = append(available, hd)
+			}
+		}
+	}
+
+	sort.Slice(available, func(i, j int) bool {
+		return available[j].t.Before(available[i].t)
+	})
+	return available
+}
 func main() {
 	r := gin.Default()
 
@@ -56,51 +104,7 @@ func main() {
 	r.GET("/", func(c *gin.Context) {
 		c.Header("Content-Type", "text/html; charset=utf-8")
 
-		files, _ := ioutil.ReadDir(ROOT)
-
-		type homedir struct {
-			dir   string
-			t     time.Time
-			count int
-		}
-		available := []*homedir{}
-		for _, dir := range files {
-			ph := path.Join(ROOT, dir.Name(), "public_html")
-			if dirExists(ph) {
-				ds, err := os.Stat(ph)
-				if err != nil {
-					continue
-				}
-
-				if ds.Mode().Perm()&4 == 0 {
-					// no permissions
-					continue
-				}
-
-				hd := &homedir{dir: dir.Name()}
-
-				_ = filepath.Walk(ph, func(path string, info os.FileInfo, err error) error {
-					if info.IsDir() {
-						return nil
-					}
-
-					t := info.ModTime()
-					if hd.t.Before(t) {
-						hd.t = t
-					}
-					hd.count++
-					return nil
-				})
-
-				if hd.count > 0 {
-					available = append(available, hd)
-				}
-			}
-		}
-
-		sort.Slice(available, func(i, j int) bool {
-			return available[j].t.Before(available[i].t)
-		})
+		available := listAvailableHomeDirs()
 
 		var out strings.Builder
 		out.WriteString("<html><head><title>berserk.red</title></head><body><pre>")
@@ -211,7 +215,21 @@ func main() {
 		})
 
 		gemini.HandleFunc("/", func(w *gemini.Response, r *gemini.Request) {
-			w.Write([]byte(SLASH))
+			available := listAvailableHomeDirs()
+
+			var out strings.Builder
+
+			out.WriteString("# Welcome to berserk.red.\n")
+			out.WriteString("## Users with content:\n\n")
+
+			for _, a := range available {
+				href := fmt.Sprintf("gemini://berserk.red/~%s/", a.dir)
+				out.WriteString(fmt.Sprintf("=> %s gemini://berserk.red/~%s/ (updated %s)\n", href, a.dir, humanize.Time(a.t)))
+			}
+
+			out.WriteString(SLASH)
+
+			w.Write([]byte(out.String()))
 		})
 
 		log.Fatal(gemini.ListenAndServeTLS(":"+os.Getenv("GEMINI_PORT"), os.Getenv("GEMINI_CRT"), os.Getenv("GEMINI_KEY")))
