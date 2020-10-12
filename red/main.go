@@ -8,7 +8,6 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
-	"net/http/httputil"
 	"os"
 	"path"
 	"path/filepath"
@@ -77,24 +76,7 @@ func main() {
 	r := gin.Default()
 
 	r.POST("/register/:user", func(c *gin.Context) {
-		key, err := c.GetRawData()
-		if err != nil {
-			c.JSON(400, gin.H{"error": err.Error()})
-			return
-		}
-		u, err := CreateSystemUser(c.Param("user"), key)
-		if err != nil {
-			c.JSON(500, gin.H{"error": err.Error()})
-			return
-		}
-
-		requestDump, err := httputil.DumpRequest(c.Request, true)
-		if err != nil {
-			panic(err)
-		}
-		u.LogP("register.txt", []byte(requestDump))
-
-		c.String(200, fmt.Sprintf(AFTER_REGISTER, u.Name, u.Name))
+		c.String(200, "sorry, registrations are not supported anymore, if you want to have a shell here send a pull request")
 	})
 
 	r.GET("/~:user", func(c *gin.Context) {
